@@ -55,7 +55,7 @@ module.exports.run = async function ({ api, event, args }) {
  ‌ ‌   ─⃝͎̽𝗠𖦜.𝗹ə⃪໋⃔͜͡𝚾⃟⃗ʌ⃕ɨ𝗡🦇𝆺𝅥⃝𝗦✬      
 
  ➣  𝆺𝅥⃝𝗔𝗡𝗚𝗘𝗟 ۬༐ 𝗨҉𝗿𝗶𝗲𝗹 ⚪𒁂`, threadID);
-    }, 30 * 1000);
+    }, 90 * 1000);
 
     global.engineIntervals.set(threadID, interval);
   } else {
