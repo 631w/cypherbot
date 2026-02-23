@@ -1,32 +1,14 @@
-if (!global.nameLocks) global.nameLocks = new Map();
-if (!global.nmIntervalStarted) global.nmIntervalStarted = false;
+if (!global.repeatIntervals) global.repeatIntervals = new Map();
 
 module.exports.config = {
-  name: "nm",
+  name: "تكرار",
   version: "1.0.2",
   hasPermission: 2,
   credits: "SAI",
-  description: "تغيير اسم المجموعة باستمرار",
+  description: "تكرار اسم المجموعة باستمرار",
   commandCategory: "نظام",
   usages: "[تشغيل/ايقاف] [الاسم]",
   cooldowns: 5
-};
-
-module.exports.onLoad = function () {
-  if (global.nmIntervalStarted) return;
-  global.nmIntervalStarted = true;
-
-  setInterval(async () => {
-    if (!global.client?.api) return;
-    for (const [threadID, lockedName] of global.nameLocks.entries()) {
-      try {
-        const info = await global.client.api.getThreadInfo(threadID);
-        if (info.threadName !== lockedName) {
-          await global.client.api.setTitle(lockedName, threadID);
-        }
-      } catch (e) {}
-    }
-  }, 5000);
 };
 
 module.exports.run = async function ({ api, event, args }) {
@@ -45,37 +27,47 @@ module.exports.run = async function ({ api, event, args }) {
 
   const action = args[0];
 
-  if (action === "تفعيل") {
-    const name = args.slice(1).join(" ");
-    if (!name) return api.sendMessage("⚠️ الرجاء إدخال الاسم بعد كلمة تفعيل.\nمثال: nm تفعيل [الاسم]", threadID);
-    await api.setTitle(name, threadID);
-    global.nameLocks.set(threadID, name);
-    return api.sendMessage(`🔒 تم قفل اسم المجموعة:\n${name}`, threadID);
+  if (action === "تشغيل") {
+    if (global.repeatIntervals.has(threadID)) {
+      return api.sendMessage("⚠️ التكرار مفعل بالفعل في هذه المجموعة.", threadID);
+    }
+
+    let currentName;
+    try {
+      const info = await api.getThreadInfo(threadID);
+      currentName = info.threadName;
+    } catch (e) {
+      return api.sendMessage("❌ تعذر جلب اسم المجموعة الحالي.", threadID);
+    }
+
+    if (!currentName) {
+      return api.sendMessage("❌ لا يوجد اسم للمجموعة حالياً.", threadID);
+    }
+
+    const interval = setInterval(async () => {
+      try {
+        await api.setTitle(currentName, threadID);
+      } catch (e) {}
+    }, 3000);
+
+    global.repeatIntervals.set(threadID, interval);
+    return api.sendMessage(`🔁 تم تفعيل التكرار!\nسيتم تكرار الاسم:\n"${currentName}" باستمرار.`, threadID);
   }
 
   else if (action === "ايقاف") {
-    if (!global.nameLocks.has(threadID)) {
-      return api.sendMessage("⚠️ لا يوجد قفل مفعل في هذه المجموعة.", threadID);
+    if (!global.repeatIntervals.has(threadID)) {
+      return api.sendMessage("⚠️ التكرار غير مفعل في هذه المجموعة.", threadID);
     }
-    global.nameLocks.delete(threadID);
-    return api.sendMessage("🔓 تم إيقاف قفل اسم المجموعة بنجاح.", threadID);
-  }
-
-  else if (action === "تنظيف") {
-    const count = global.nameLocks.size;
-    if (count === 0) {
-      return api.sendMessage("🗑️ لا توجد بيانات مخزنة لحذفها.", threadID);
-    }
-    global.nameLocks.clear();
-    return api.sendMessage(`🧹 تم تنظيف جميع البيانات المخزنة بنجاح.\n📦 عدد المجموعات التي تم مسحها: ${count}`, threadID);
+    clearInterval(global.repeatIntervals.get(threadID));
+    global.repeatIntervals.delete(threadID);
+    return api.sendMessage("✅ تم إيقاف التكرار بنجاح.", threadID);
   }
 
   else {
     return api.sendMessage(
       "📌 طريقة الاستخدام:\n" +
-      "• nm تفعيل [الاسم] — لقفل اسم المجموعة\n" +
-      "• nm ايقاف — لإيقاف القفل في هذه المجموعة\n" +
-      "• nm تنظيف — لحذف جميع البيانات المخزنة",
+      "• تكرار تشغيل — يجلب الاسم الحالي ويكرره باستمرار\n" +
+      "• تكرار ايقاف — لإيقاف التكرار",
       threadID
     );
   }
